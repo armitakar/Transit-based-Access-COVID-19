@@ -1,3 +1,5 @@
+
+### This code is used to average multiple isochrones generated with different departure times (hence, different waiting times).
 #code collected and modified from: https://gis.stackexchange.com/questions/68359/creating-average-polygon
 
 
@@ -17,7 +19,7 @@ import pandas as pd
 import json
 
 
-## Average polygon functions
+## Functions to average polygons
 
 def average_polygon(shapes, path):  
     max_shape = cascaded_union([shape(s) for s in shapes])
@@ -71,7 +73,7 @@ def write_shapes(infile, outfile):
             json.dump(a, outfile)
 
 
-## Functions for shapefiles generation, categorizations, and storing
+## Functions to generate, categorize, and store shapefiles
 def categorize_file(filename, date):
     filename_category = [[],[],[],[],[],[],[],[],[],[],[],[]]
     for i in filename:
