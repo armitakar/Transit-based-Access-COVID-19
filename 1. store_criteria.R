@@ -1,14 +1,19 @@
 ######### Selection of Health Facilities #########
 
-### Function to cluster facilities using dbscan 
+
+### Cluster health care facilities using dbscan 
+# As health offices tend to cluster in space, we use dbscan to group them 
+# and generate a centroid to represent the entire cluster.  Each cluster 
+# has a minimum of 3 health facilities and is at most 400m apart from its neighbor(s). 
+
 poi_cent_dbscan = function(data, Type){
   data$long = as.numeric(unlist(map(data$geometry,1)))
   data$lat = as.numeric(unlist(map(data$geometry,2)))
   st_geometry(data) <- NULL
   dat =  data[c(83,82)]
   
-  #epsilon value 400 meters
-  #minimum clustering threshold 3 points
+  # epsilon: 400 meters
+  # minimum clustering threshold: 3 points
   db = dbscan::dbscan(dat,eps=400,minPts = 3)
   dat$clust = db$cluster
   
@@ -39,7 +44,7 @@ poi_cent_dbscan = function(data, Type){
     centroid$geometry[i] <- d
     
   }
-  #combine noises and clusters to generate list of data points
+  #combine noises and clusters to generate a final list of facilities.
   centroid$long = unlist(map(centroid$geometry,1))
   centroid$lat = unlist(map(centroid$geometry,2))
   centroid = centroid[-c(1:2)]
@@ -48,7 +53,9 @@ poi_cent_dbscan = function(data, Type){
   return(dat)
 }
 
-#### Function to select non-urgent health care facilities 
+#### Next, we split health care facilities into two categories: urgent and non-urgent. 
+
+#### Select non-urgent health care facilities 
 health_poi_nonurgent = function(shapefile_name, service_city){
   #read data
   area = st_read(paste("D:/Accessibility_study/Shapefiles1/",shapefile_name,"_coverage.shp",sep=""))
@@ -78,7 +85,7 @@ health_poi_nonurgent = function(shapefile_name, service_city){
   return(poi_all)
 }
 
-#### Function to select urgent helath care facilities 
+#### Select urgent helath care facilities 
 health_poi_urgent = function(shapefile_name, service_city){
   #read data
   area = st_read(paste("D:/Accessibility_study/Shapefiles1/",shapefile_name,"_coverage.shp",sep=""))
@@ -110,9 +117,9 @@ health_poi_urgent = function(shapefile_name, service_city){
 
 
 
-######### Selection of Grocery Stores ##################
+######### Select of Grocery Stores ##################
 
-#### Function to identify InfoGroup data for the study area 
+#### Identify store locations within the study area from InfoGroup data
 info_data = function(shapefile_name,state_code){
   #read study area shapefile
   area = st_read(paste("D:/Accessibility_study/Shapefiles1/",shapefile_name,"_coverage.shp",sep=""))
@@ -132,7 +139,7 @@ info_data = function(shapefile_name,state_code){
                              lat = unlist(map(sf_poi$geometry,2)))
   sf_poi_prj = st_transform(sf_poi, crs = "EPSG:5070")
   
-  #identify the busniess locations within the study area
+  #identify store locations within the study area
   poi_all = st_intersection(sf_poi_prj, area)
   poi_all %>% ggplot() +
     geom_sf(color = "black") 
@@ -141,23 +148,23 @@ info_data = function(shapefile_name,state_code){
 }
 
 
-#### Function to identify grocery stores
+#### Retain only large stores
 poi_grocery = function(poi_all, service_city){
   poi_all$NAICS6 = substring(poi_all$Primary.NAICS.Code, 1, 6)
   
-  #identify supermarket and grocery stores based on NAICS 445110
+  #select supermarket and grocery stores using NAICS 445110
   poi_all1 = subset(poi_all, NAICS6 == "445110" & complete.cases(Sales.Volume..9....Location)
          & complete.cases(Employee.Size..5....Location))
-  #identify top 10th percentile among all supermarket and grocery stores (Employee size > 80 and sales volume > 17.5 million)
+  #select top 10th percentile of supermarket and grocery stores (Employee size > 80 and sales volume > 17.5 million)
   grocery = subset(poi_all1, Sales.Volume..9....Location>17506 & Employee.Size..5....Location >80)
   
-  #idetify departmental stores based on NAICS code 452111 and self-selection
+  #select departmental stores based on NAICS code 452111, and additional larger stores outside of this NAICS code. 
   dept = subset(poi_all, NAICS6 == "452111")
   dept_gro = dept[dept$Company == "WALMART" | 
                     dept$Company == "WALMART SUPERCENTER" | 
                     dept$Company == "TARGET",]
   
-  #identify warehouse clubs based on NAICS code 452910 and self-selection
+  #identify warehouse clubs based on NAICS code 452910 and additional larger stores outside of this NAICS code. 
   ware = subset(poi_all, NAICS6 == "452910")
   ware_gro = ware[ware$Company == "WALMART" | 
                     ware$Company == "WALMART SUPERCENTER" |
