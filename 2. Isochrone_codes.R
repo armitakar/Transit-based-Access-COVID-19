@@ -1,3 +1,5 @@
+#### GENERATING ISOCHRONES OF 30 and 45 MINUTES TRAVEL TIME BY TRANSIT 
+
 #dev.opentripplanner.org/apidoc/0.15.0/resource_PlannerResource.html
 #https://developers.google.com/transit/gtfs/reference#routestxt
 
@@ -40,12 +42,12 @@ library(tidytransit)
 
 
 ####### getting census data ########
-census_api_key("0374af53cfe8d2728204af53395977de1b54b17d")
+census_api_key("KEY_OMITTED")
 
 # variable serach
 v18 <- load_variables(2018, "acs5", cache = TRUE)
 
-### function to extract blockgroup-level ACS data for each state
+### Extract blockgroup-level ACS data for each state
 acs_state = function(state_code){
   acs_data = get_acs(geography = "block group",
           state = state_code,
@@ -72,7 +74,7 @@ acs_state = function(state_code){
   acs_data <- select(acs_data, -moe)
   acs_data1 <- spread(acs_data, key = variable, value = estimate)
   
-  #Estimating percentages
+  #Calculate demographic variables (in percentage)
   acs_data1$p_n_whi = ((1- acs_data1$white)/acs_data1$tot_pop)*100
   acs_data1$p_his = (acs_data1$hispanic/acs_data1$tot_pop)*100
   acs_data1$p_hs = (acs_data1$high_school/acs_data1$pop_over25)*100
@@ -158,7 +160,7 @@ iso <- function(poi, Date, Time, Cutoff, Date_str, poi_type, city, type, exclude
   write(sf_geojson(p1), file = paste("D:/Accessibility_study/isochrones_by_cities/EPSG 5070/", city, "/", type, "/", poi_type,"_", Date_str,"_", Time, "_", Cutoff, ".geojson", sep = ""))
 }
 
-#### Function to check available route types for each city
+#### Check available route types for each city
 check_route_type <- function(gtfs_city_date) {
   zipF<- paste("D:/Accessibility_study/gtfs_data/",gtfs_city_date,".zip",sep="")
   outDir<-paste("D:/Accessibility_study/gtfs_data/",gtfs_city_date, sep="")
