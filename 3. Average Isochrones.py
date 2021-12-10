@@ -550,7 +550,7 @@ store_file_grocery("isochrones_dallas", ["Jan07","Apr07", "Dec08"], 'Dallas')
 
 
 ## SLD database
-bg = gp.read_file(r'D:\Accessibility_study\Final isochrones1\shapefiles\study_area1.shp')
+bg = gp.read_file(r'D:\Accessibility_study\Final isochrones1\Shapefiles_new\Original shapefiles\study_area_updated_10_24_21.shp')
 bg.columns
 bg.sort_values("GEOID", inplace = True) 
 bg.drop_duplicates(subset ="GEOID", keep = "first", inplace = True) 
@@ -580,7 +580,7 @@ gdf.to_file(r'D:\Accessibility_study\Final isochrones1\shapefiles\study_area_edi
 
 
 ## Joining isochrones to blg
-blg = gp.read_file(r'D:\Accessibility_study\Final isochrones1\shapefiles_new\Original shapefiles\study_area_edited.shp')
+blg = gp.read_file(r'D:\Accessibility_study\Final isochrones1\Shapefiles_new\Original shapefiles\study_area_updated_10_24_21.shp')
 
 shp0=gp.read_file(r'D:\Accessibility_study\Final isochrones1\shapefiles_new\Differences\health_u_diff13_2700_morning.shp')
 shp1=gp.read_file(r'D:\Accessibility_study\Final isochrones1\shapefiles_new\Original shapefiles_segmented\health_u_postcovid_2700_morning_m.shp')
@@ -662,15 +662,23 @@ dat_1800['area_type'] = ['rural' if dat_1800['act_den'].iloc[i] <= 0.5
 dat_1800['p_nv'] = dat_1800['p_ow_nv'] + dat_1800['p_re_nv']
 
 dat1_1800 = dat_1800[['layer_1', 'City','Access', 'ID', 'GEOID', 'NAME', 'HH_size', 
-                      'med_inc', 'tot_pop','p_nwhi','p_his', 'p_hs', 'p_pov',
+                      'med_inc', 'tot_pop','p_his', 'p_nhw', 'p_black', 'p_other', 'p_hs', 'p_pov',
                       'p_noins', 'p_ow_nv', 'p_re_nv','p_nv','p_own', 'pop_den',
                       'job_den', 'act_den','p_low_inc', 'road_dens', 'mm_road_de',
                       'int_den', 'area_type','Area_sqm', 'shp_sqm', 'ratio', 'Time', 'Iso', 'Facility','Diff']]
 
-summary_1800 = dat1_1800.groupby(["City", "Access", 'Diff']).agg(["mean", "median", "std", "sum"]).reset_index()
-
 dat2_1800 = pd.concat([dat1_1800, pd.get_dummies(dat1_1800['area_type'])], axis=1)
 dat3_1800 = pd.concat([dat2_1800, pd.get_dummies(dat2_1800['City'])], axis=1)
 dat3_1800.to_csv(r'D:\Accessibility_study\Final isochrones1\Summary\health_2700_morning_u.csv')
+
+### summary tables
+dat_1800 = pd.read_csv(r'D:\Accessibility_study\Final isochrones1\Summary\health_1800_midday_nu.csv')
+summary_1800 = dat_1800.groupby(["Access", 'Diff', 'area_type']).agg({'p_pov': ["mean", "median", "std"],
+                                                                'p_nhw': ["mean", "median", "std"],
+                                                                'p_black': ["mean", "median", "std"],
+                                                                'p_other': ["mean", "median", "std"],
+                                                                'p_nv': ["mean", "median", "std"],
+                                                                'p_low_inc': ["mean", "median", "std"],
+                                                                'Area_sqm': ["sum"]}).reset_index()
 summary_1800.to_csv(r'D:\Accessibility_study\Final isochrones1\Summary\health_summary_2700_morning_u.csv')
 
