@@ -1,5 +1,3 @@
-#### GENERATING ISOCHRONES OF 30 and 45 MINUTES TRAVEL TIME BY TRANSIT 
-
 #dev.opentripplanner.org/apidoc/0.15.0/resource_PlannerResource.html
 #https://developers.google.com/transit/gtfs/reference#routestxt
 
@@ -20,18 +18,18 @@ library(dbscan)
 
 
 library(tidycensus)
-library(tidyverse)
 library(tigris)
 library(magrittr)
 library(dplyr)
+library(tidyverse)
 
 #states() %>% plot()
 options(tigris_use_cache = TRUE)
 
-library(dplyr)
+
 library(ggplot2)
 library(tidytransit)
-
+library(dplyr)
 
 ### cmd instructions
 #cd C:\Users\armit\otp
@@ -42,12 +40,12 @@ library(tidytransit)
 
 
 ####### getting census data ########
-census_api_key("KEY_OMITTED")
+census_api_key("0374af53cfe8d2728204af53395977de1b54b17d")
 
 # variable serach
 v18 <- load_variables(2018, "acs5", cache = TRUE)
 
-### Extract blockgroup-level ACS data for each state
+### function to extract blockgroup-level ACS data for each state
 acs_state = function(state_code){
   acs_data = get_acs(geography = "block group",
           state = state_code,
@@ -55,6 +53,8 @@ acs_state = function(state_code){
           variables = c(tot_pop = "B01003_001", #total population
                         pop_over25 = "B15003_001", #population over age 25
                         white = "B02001_002", #total white population
+                        black = "B02001_003", #total black population
+                        NHW = "B03002_003", #total non-hispanic white population
                         hispanic = "B03002_012", #total hispanic population
                         high_school = "B15003_018", #total population with a high school degree
                         med_inc = "B19013_001", #median income
@@ -73,8 +73,6 @@ acs_state = function(state_code){
   print("acs_data_downloaded")
   acs_data <- select(acs_data, -moe)
   acs_data1 <- spread(acs_data, key = variable, value = estimate)
-  
-  #Calculate demographic variables (in percentage)
   acs_data1$p_n_whi = ((1- acs_data1$white)/acs_data1$tot_pop)*100
   acs_data1$p_his = (acs_data1$hispanic/acs_data1$tot_pop)*100
   acs_data1$p_hs = (acs_data1$high_school/acs_data1$pop_over25)*100
@@ -89,7 +87,7 @@ acs_state = function(state_code){
 }
 
 
-#### Determine study area ####
+#### determine study area ####
 study_area = function(acs_state_area, gtfs_city_date, shapefile_name){
   #stop = read.csv(paste("D:/Accessibility_study/gtfs_data/",gtfs_city_date,"./stops.txt",sep=""),
   #                stringsAsFactors = FALSE)
@@ -106,7 +104,7 @@ study_area = function(acs_state_area, gtfs_city_date, shapefile_name){
     st_transform(sf_stop, crs = "EPSG:5070")
   sf_stop_prj %>% ggplot() +
     geom_sf(color = "black")
-  st_write(sf_stop_prj, dsn = paste("D:/Accessibility_study/Shapefiles1/",shapefile_name,"_stop.shp",sep=""),
+  st_write(sf_stop_prj, dsn = paste("D:/Accessibility_study/city_shapefiles/",shapefile_name,"_stop.shp",sep=""),
            driver = "ESRI Shapefile")
   print("exported stop data to shapefiles")
   
@@ -115,7 +113,7 @@ study_area = function(acs_state_area, gtfs_city_date, shapefile_name){
     st_union() #half mile (approx 10min walk)
   area = acs_state_area%>%
     filter(st_intersects(x = ., y = stop_area, sparse = FALSE))
-  st_write(area, dsn = paste("D:/Accessibility_study/Shapefiles1/",shapefile_name,"_coverage.shp",sep=""),
+  st_write(area, dsn = paste("D:/Accessibility_study/city_shapefiles/",shapefile_name,"_coverage.shp",sep=""),
            driver = "ESRI Shapefile")
   print("exported study area to shapefiles")
   return(area)
@@ -136,8 +134,8 @@ iso <- function(poi, Date, Time, Cutoff, Date_str, poi_type, city, type, exclude
         mode = "WALK, TRANSIT", # modes we want the route planner to use
         bannedRoutes = excluded_routes, #exclude the routes except light rail, subway, bus, cable tram
         maxWalkDistance = 800, #half mile (approx 10min walk)
-        maxTransfers = 1, #maximum allowable number of transfers 1
-        minTransferTime = 300, # minimum transfer time 5 minutes
+        maxTransfers = 1,
+        minTransferTime = 300, #5 min
         date = Date,
         time= Time,
         cutoffSec = Cutoff
@@ -160,7 +158,7 @@ iso <- function(poi, Date, Time, Cutoff, Date_str, poi_type, city, type, exclude
   write(sf_geojson(p1), file = paste("D:/Accessibility_study/isochrones_by_cities/EPSG 5070/", city, "/", type, "/", poi_type,"_", Date_str,"_", Time, "_", Cutoff, ".geojson", sep = ""))
 }
 
-#### Check available route types for each city
+#### Function to check available route types for each city
 check_route_type <- function(gtfs_city_date) {
   zipF<- paste("D:/Accessibility_study/gtfs_data/",gtfs_city_date,".zip",sep="")
   outDir<-paste("D:/Accessibility_study/gtfs_data/",gtfs_city_date, sep="")
@@ -245,7 +243,7 @@ chicago_study_area = study_area(acs_IL, "gtfs_CTA_chicago/gtfs_21_december",
 
 #Columbus
 acs_OH = acs_state("OH")
-columbus_study_area = study_area(acs_OH, "gtfs_COTA_columbus/gtfs_4_january", 
+columbus_study_area = study_area(acs_OH, "gtfs_COTA_columbus/gtfs_4_january_columbus", 
                                  "cota_columbus")
 
 #Austin, Dallas
@@ -257,7 +255,7 @@ austin_study_area = study_area(acs_TX, "gtfs_capitalmetro_austin/gtfs_7_january"
 
 #Denver
 acs_CO = acs_state("CO")
-denver_study_area = study_area(acs_CO, "gtfs_RTD_denver/gtfs_1_january", 
+denver_study_area = study_area(acs_CO, "gtfs_RTD_denver/gtfs_1_january_denver", 
                                "denver_RTD")
 
 #LA, SJ, SF
@@ -266,7 +264,7 @@ LA_study_area_bus = study_area(acs_CA, "gtfs_LAmetro_la/gtfs_9_january_bus",
                                "LAmetro_bus_la")
 LA_study_area_rail = study_area(acs_CA, "gtfs_LAmetro_la/gtfs_9_january_rail", 
                                 "LAmetro_rail_la")
-sanjose_study_area = study_area(acs_CA, "gfts_VTA_sanJose/gtfs_23January", 
+sanjose_study_area = study_area(acs_CA, "gfts_VTA_sanJose/gtfs_23_january", 
                                 "VTA_sanJose")
 SF_study_area = study_area(acs_CA, "gtfs_SFMTA_sanfrancisco/gtfs_22_january", 
                            "SFMTA_sanfrancisco")
@@ -317,9 +315,9 @@ philadelphia_study_area = study_area(acs_PA, "gtfs_SEPTA_philadelphia/gtfs_24_ja
 acs_AZ = acs_state("AZ")
 phoenix_study_area = study_area(acs_AZ, "gtfs_valleymetro_phoenix/gtfs_17_january", 
                                 "valleymetro_phoenix")
-#Portland
+ #Portland
 acs_OR = acs_state("OR")
-portland_study_area = study_area(acs_OR, "gtfs_TriMet_portland/gtfs_11_january", 
+portland_study_area = study_area(acs_OR, "gtfs_TriMet_portland/gtfs_11_january_portland", 
                                  "TriMet_portland")
 
 #Seatle
@@ -337,7 +335,7 @@ slc_study_area = study_area(acs_UT, "gtfs_UTA_slc/gtfs_7_january",
 
 
 
-##### Isochrones calculation ######
+##### isochrones calculation ######
 
 #### isochrones for columbus ####
 transfer = read.csv("D:/Accessibility_study/gtfs_data/gtfs_COTA_columbus/gtfs_6_december/transfers.txt")
@@ -633,7 +631,7 @@ for (i in comb){iso(poi_nonurgent, "1/7/2020", i[[1]], i[[2]], "Jan07", "health"
 
 
 
-#### Shapefile post-processing ####
+#### Shapefile post-processing####
 #### edit geojson 
 names = list.files("D:/Accessibility_study/Final isochrones1/health/health_covid_1800_midday",
                    pattern = ".geojson", include.dirs = FALSE)
